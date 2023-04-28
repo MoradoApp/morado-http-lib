@@ -13,7 +13,7 @@ export class AxiosImplService implements IWrapperHttpService {
   constructor(private configService: ConfigService) {}
 
   async get<T> (requestHttp: IRequestHttp): Promise<ResponseHttp<T>> {
-    return await this.buildOperation('get', requestHttp);
+    return this.buildOperation('get', requestHttp);
   }
 
   async post<T>(requestHttp: IRequestHttp): Promise<ResponseHttp<T>> {
@@ -22,6 +22,10 @@ export class AxiosImplService implements IWrapperHttpService {
 
   async put<T>(requestHttp: IRequestHttp): Promise<ResponseHttp<T>> {
     return this.buildOperation('put', requestHttp);
+  }
+
+  async patch<T>(requestHttp: IRequestHttp): Promise<ResponseHttp<T>> {
+    return this.buildOperation('patch', requestHttp);
   }
 
   async delete<T>(requestHttp: IRequestHttp): Promise<ResponseHttp<T>> {

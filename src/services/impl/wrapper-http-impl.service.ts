@@ -18,6 +18,10 @@ export class WrapperHttpLibService implements IWrapperHttpService {
   async put<T>(requestHttp: IRequestHttp): Promise<ResponseHttp<T>> {
     return this.httpService.put(requestHttp);
   }
+
+  async patch<T>(requestHttp: IRequestHttp): Promise<ResponseHttp<T>> {
+    return this.httpService.patch(requestHttp);
+  }
   
   async delete<T>(requestHttp: IRequestHttp): Promise<ResponseHttp<T>> {
     return this.httpService.delete(requestHttp);
