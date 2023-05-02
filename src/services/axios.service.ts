@@ -1,42 +1,35 @@
 import axios, { AxiosError, AxiosInstance } from 'axios'
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-import { IWrapperHttpService } from '../IWrapperHttpService';
-import { IRequestHttp } from '../../model/interface/IRequestHttp';
-import { ResponseHttp } from '../../model/ResponseHttp';
-import { AxiosRequestType } from '../../model/types/request-axios.type';
+import { IMoradoHttpService } from '../model/interface/morado-http.interface';
+import { IRequestHttp } from '../model/interface/request-http.interface';
+import { ResponseHttp } from '../model/response-http';
+import { AxiosRequestType } from '../model/types/request-axios.type';
 
 // @ts-ignore
 @Injectable()
-export class AxiosImplService implements IWrapperHttpService {
-  constructor(private configService: ConfigService) {}
+export class AxiosService implements IMoradoHttpService {
+  constructor(private readonly configService: ConfigService) {}
 
   async get<T> (requestHttp: IRequestHttp): Promise<ResponseHttp<T>> {
-    return this.buildOperation('get', requestHttp);
+    return this.excecuteOperation('get', this.getOptions(requestHttp), requestHttp, this.getAxiosInstance(requestHttp.printTimming));
   }
 
   async post<T>(requestHttp: IRequestHttp): Promise<ResponseHttp<T>> {
-    return this.buildOperation('post', requestHttp);
+    return this.excecuteOperation('post', this.getOptions(requestHttp), requestHttp, this.getAxiosInstance(requestHttp.printTimming));
   }
 
   async put<T>(requestHttp: IRequestHttp): Promise<ResponseHttp<T>> {
-    return this.buildOperation('put', requestHttp);
+    return this.excecuteOperation('put', this.getOptions(requestHttp), requestHttp, this.getAxiosInstance(requestHttp.printTimming));
   }
 
   async patch<T>(requestHttp: IRequestHttp): Promise<ResponseHttp<T>> {
-    return this.buildOperation('patch', requestHttp);
+    return this.excecuteOperation('patch', this.getOptions(requestHttp), requestHttp, this.getAxiosInstance(requestHttp.printTimming));
   }
 
   async delete<T>(requestHttp: IRequestHttp): Promise<ResponseHttp<T>> {
-    return this.buildOperation('delete', requestHttp);
-  }
-
-  private async buildOperation<T>(operation: string, requestHttp: IRequestHttp): Promise<ResponseHttp<T>> {
-    const customAxiosApi = this.getAxiosInstance(requestHttp.printTimming);
-    const axiosConfig = this.getOptions(requestHttp);
-
-    return this.excecuteOperation(operation, axiosConfig, requestHttp, customAxiosApi)
+    return this.excecuteOperation('delete', this.getOptions(requestHttp), requestHttp, this.getAxiosInstance(requestHttp.printTimming));
   }
   
   private async excecuteOperation<T>(
@@ -45,24 +38,21 @@ export class AxiosImplService implements IWrapperHttpService {
     requestHttp: IRequestHttp,
     customAxiosApi: AxiosInstance
   ): Promise<ResponseHttp<T>> {
-    if (requestHttp.body) {
-      const axiosResponse = await customAxiosApi[operation](requestHttp.url, requestHttp.body, axiosConfig)
-      .catch((axiosError: AxiosError) => {
-        throw new InternalServerErrorException({ description: axiosError.message, statusCode: axiosError.status })
-      });
+      if (requestHttp.body) {
+        const axiosResponse = await customAxiosApi[operation](requestHttp.url, requestHttp.body, axiosConfig)
+        .catch((axiosError: AxiosError) => { throw new ResponseHttp(axiosError.message, axiosError.status ?? 500)});
 
+        return new ResponseHttp(axiosResponse.data, axiosResponse.status)
+      }
+  
+      const axiosResponse = await customAxiosApi[operation](requestHttp.url, axiosConfig)
+        .catch((axiosError: AxiosError) => { throw new ResponseHttp(axiosError.message, axiosError.status ?? 500)});
+  
       return new ResponseHttp(axiosResponse.data, axiosResponse.status)
-    }
-
-    const axiosResponse = await customAxiosApi[operation](requestHttp.url, axiosConfig)
-      .catch((axiosError: AxiosError) => {
-        throw new InternalServerErrorException({ description: axiosError.message, statusCode: axiosError.status })
-      });
-
-    return new ResponseHttp(axiosResponse.data, axiosResponse.status)
   }
   
   private getOptions(requestHttp: IRequestHttp): AxiosRequestType {
+
     return {
       headers: {
         'Content-Type': 'application/json',

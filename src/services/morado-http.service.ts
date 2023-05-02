@@ -1,15 +1,14 @@
 import { Injectable } from '@nestjs/common';
 
-import { IRequestHttp } from '../../model/interface/IRequestHttp';
-import { ResponseHttp } from '../../model/ResponseHttp';
-import { IWrapperHttpService } from '../IWrapperHttpService';
-import { AxiosImplService } from './axios-impl.service';
+import { IRequestHttp } from '../model/interface/request-http.interface';
+import { ResponseHttp } from '../model/response-http';
+import { IMoradoHttpService } from '../model/interface/morado-http.interface';
+import { AxiosService } from './axios.service';
 
 // @ts-ignore
 @Injectable()
-export class WrapperHttpLibService implements IWrapperHttpService {
-
-  constructor(private readonly httpService: AxiosImplService) {}
+export class MoradoHttp implements IMoradoHttpService {
+  constructor(private readonly httpService: AxiosService) {}
 
   async post<T>(requestHttp: IRequestHttp): Promise<ResponseHttp<T>> {
     return this.httpService.post(requestHttp);

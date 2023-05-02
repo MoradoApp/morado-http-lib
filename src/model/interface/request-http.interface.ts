@@ -1,3 +1,5 @@
+import { AxiosInstance } from "axios";
+
 export interface IRequestHttp {
   url: string;
   retry?: number;

@@ -1,7 +1,7 @@
-import { ResponseHttp } from "../model/ResponseHttp";
-import { IRequestHttp } from "../model/interface/IRequestHttp";
+import { ResponseHttp } from "../response-http";
+import { IRequestHttp } from "./request-http.interface";
 
-export interface IWrapperHttpService {
+export interface IMoradoHttpService {
   get<T>(requestHttp: IRequestHttp): Promise<ResponseHttp<T>>;
   post<T>(requestHttp: IRequestHttp): Promise<ResponseHttp<T>>;
   put<T>(requestHttp: IRequestHttp): Promise<ResponseHttp<T>>;
