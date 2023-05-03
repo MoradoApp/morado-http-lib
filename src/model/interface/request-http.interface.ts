@@ -1,6 +1,4 @@
-import { AxiosInstance } from "axios";
-
-export interface IRequestHttp {
+export interface RequestHttp {
   url: string;
   retry?: number;
   body?: unknown;

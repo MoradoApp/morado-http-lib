@@ -6,4 +6,4 @@ import { AxiosService } from './services/axios.service';
   providers: [AxiosService, MoradoHttp],
   exports: [MoradoHttp],
 })
-export class WrapperHttpLibModule {}
+export class MoradoHttpLibModule {}

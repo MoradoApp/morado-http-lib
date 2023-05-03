@@ -1,10 +1,10 @@
-import { ResponseHttp } from "../response-http";
-import { IRequestHttp } from "./request-http.interface";
+import { ResponseHttp } from '../response-http';
+import { RequestHttp } from './request-http.interface';
 
-export interface IMoradoHttpService {
-  get<T>(requestHttp: IRequestHttp): Promise<ResponseHttp<T>>;
-  post<T>(requestHttp: IRequestHttp): Promise<ResponseHttp<T>>;
-  put<T>(requestHttp: IRequestHttp): Promise<ResponseHttp<T>>;
-  patch<T>(requestHttp: IRequestHttp): Promise<ResponseHttp<T>>;
-  delete<T>(requestHttp: IRequestHttp): Promise<ResponseHttp<T>>;
+export interface MoradoHttpService {
+  get<T>(requestHttp: RequestHttp): Promise<ResponseHttp<T>>;
+  post<T>(requestHttp: RequestHttp): Promise<ResponseHttp<T>>;
+  put<T>(requestHttp: RequestHttp): Promise<ResponseHttp<T>>;
+  patch<T>(requestHttp: RequestHttp): Promise<ResponseHttp<T>>;
+  delete<T>(requestHttp: RequestHttp): Promise<ResponseHttp<T>>;
 }
