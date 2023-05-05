@@ -1,9 +1,10 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+import axios, { AxiosError } from 'axios';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 
-import { AxiosService } from '../../services/axios.service';
-import { RequestHttp } from '../../model/interface/request-http.interface';
-import axios from 'axios';
-import { ConfigService } from '@nestjs/config';
+import { AxiosService } from '../../src/services/axios.service';
+import { RequestHttp } from '../../src/model/interface/request-http.interface';
 
 jest.mock('axios');
 
@@ -37,6 +38,8 @@ describe('Axios Service', () => {
       ],
     }).compile();
     axiosService = module.get<AxiosService>(AxiosService);
+
+    jest.clearAllMocks();
   });
 
   describe('Methods', () => {
@@ -59,11 +62,14 @@ describe('Axios Service', () => {
         },
       });
 
-      getMock.mockResolvedValue({ data: { ok: 'ok' }, status: 200 });
+      const expected = { data: { message: 'get' }, status: 200 };
+      getMock.mockResolvedValue(expected);
 
       const response = await axiosService.get(requestHttp);
 
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(expected.status);
+      expect(response.data).toMatchObject(expected.data);
+
       expect(response).toEqual(
         expect.objectContaining({
           status: expect.any(Number),
@@ -91,18 +97,19 @@ describe('Axios Service', () => {
         },
       });
 
-      getMock.mockRejectedValueOnce({ message: 'Error', status: 500 });
+      const expected: Partial<AxiosError> = {
+        code: '123',
+        message: 'Error GET',
+        status: 500,
+      };
+      getMock.mockRejectedValueOnce(expected);
 
       try {
         await axiosService.get(requestHttp);
-      } catch (error) {
-        expect(error.status).toBe(500);
-        expect(error).toEqual(
-          expect.objectContaining({
-            status: expect.any(Number),
-            data: expect.any(String),
-          }),
-        );
+      } catch (error: any) {
+        expect(expected.status).toBe(error.status);
+        expect(expected.code).toBe(error.error.code);
+        expect(expected.message).toBe(error.error.message);
       }
     });
 
@@ -169,18 +176,19 @@ describe('Axios Service', () => {
         },
       });
 
-      postMock.mockRejectedValueOnce({ message: 'Error', status: undefined });
+      const expected: Partial<AxiosError> = {
+        code: '123',
+        message: 'Error POST',
+        status: 500,
+      };
+      postMock.mockRejectedValueOnce(expected);
 
       try {
         await axiosService.post(requestHttp);
-      } catch (error) {
-        expect(error.status).toBe(500);
-        expect(error).toEqual(
-          expect.objectContaining({
-            status: expect.any(Number),
-            data: expect.any(String),
-          }),
-        );
+      } catch (error: any) {
+        expect(expected.status).toBe(error.status);
+        expect(expected.code).toBe(error.error.code);
+        expect(expected.message).toBe(error.error.message);
       }
     });
 
@@ -229,7 +237,6 @@ describe('Axios Service', () => {
         body: {
           greeting: 'Hello world',
         },
-        retry: 3,
       };
 
       const patchMock = jest.fn();
@@ -243,18 +250,19 @@ describe('Axios Service', () => {
         },
       });
 
-      patchMock.mockRejectedValueOnce({ message: 'Error', status: 500 });
+      const expected: Partial<AxiosError> = {
+        code: '123',
+        message: 'Error PATCH',
+        status: 500,
+      };
+      patchMock.mockRejectedValueOnce(expected);
 
       try {
         await axiosService.patch(requestHttp);
-      } catch (error) {
-        expect(error.status).toBe(500);
-        expect(error).toEqual(
-          expect.objectContaining({
-            status: expect.any(Number),
-            data: expect.any(String),
-          }),
-        );
+      } catch (error: any) {
+        expect(expected.status).toBe(error.status);
+        expect(expected.code).toBe(error.error.code);
+        expect(expected.message).toBe(error.error.message);
       }
     });
   });
@@ -282,18 +290,66 @@ describe('Axios Service', () => {
       },
     });
 
-    deleteMock.mockRejectedValueOnce({ message: 'Error' });
+    const expected: Partial<AxiosError> = {
+      code: '123',
+      message: 'Error DELETE',
+      status: 500,
+    };
+    deleteMock.mockRejectedValueOnce(expected);
 
     try {
       await axiosService.delete(requestHttp);
-    } catch (error) {
-      expect(error.status).toBe(500);
-      expect(error).toEqual(
-        expect.objectContaining({
-          status: expect.any(Number),
-          data: expect.any(String),
-        }),
-      );
+    } catch (error: any) {
+      expect(expected.status).toBe(error.status);
+      expect(expected.code).toBe(error.error.code);
+      expect(expected.message).toBe(error.error.message);
     }
+  });
+
+  it(`Given a request http with retry,
+    When the method is GET,
+    Then the service should retry the request and return 200 on third attempt
+  `, async () => {
+    const requestHttp: RequestHttp = {
+      url: 'http://localhost:8080',
+      retry: 3,
+    };
+
+    const getMock = jest.fn();
+
+    // @ts-ignore
+    axios.create.mockReturnValue({
+      get: getMock,
+      interceptors: {
+        request: {
+          use: jest.fn(),
+        },
+        response: {
+          use: jest.fn(),
+        },
+      },
+    });
+
+    const expected = { data: 'Success retry test', status: 201 };
+
+    getMock.mockRejectedValueOnce({
+      code: '123',
+      message: 'First error',
+      status: 500,
+    });
+
+    getMock.mockRejectedValueOnce({
+      code: '123',
+      message: 'Second error',
+      status: 403,
+    });
+
+    getMock.mockResolvedValueOnce(expected);
+
+    const response = await axiosService.get(requestHttp);
+
+    expect(getMock).toHaveBeenCalledTimes(3);
+    expect(expected.data).toBe(response.data);
+    expect(expected.status).toBe(response.status);
   });
 });

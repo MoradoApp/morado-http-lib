@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import axios, { AxiosError, AxiosInstance } from 'axios';
 import { ConfigService } from '@nestjs/config';
+import axios, { AxiosError, AxiosInstance } from 'axios';
 
-import { MoradoHttpService } from '../model/interface/morado-http.interface';
-import { RequestHttp } from '../model/interface/request-http.interface';
+import { delay } from '../utils';
 import { ResponseHttp } from '../model/response-http';
+import { ErrorResponseHttp } from '../model/error-response.http';
 import { AxiosRequestType } from '../model/types/request-axios.type';
+import { RequestHttp } from '../model/interface/request-http.interface';
+import { MoradoHttpService } from '../model/interface/morado-http.interface';
 
 @Injectable()
 export class AxiosService implements MoradoHttpService {
@@ -62,23 +64,24 @@ export class AxiosService implements MoradoHttpService {
     requestHttp: RequestHttp,
     customAxiosApi: AxiosInstance,
   ): Promise<ResponseHttp<T>> {
-    if (requestHttp.body) {
-      const axiosResponse = await customAxiosApi[operation](
-        requestHttp.url,
-        requestHttp.body,
-        axiosConfig,
-      ).catch((axiosError: AxiosError) => {
-        throw new ResponseHttp(axiosError.message, axiosError.status ?? 500);
-      });
-
-      return new ResponseHttp(axiosResponse.data, axiosResponse.status);
-    }
-
     const axiosResponse = await customAxiosApi[operation](
       requestHttp.url,
+      requestHttp.body ? requestHttp.body : axiosConfig,
       axiosConfig,
-    ).catch((axiosError: AxiosError) => {
-      throw new ResponseHttp(axiosError.message, axiosError.status ?? 500);
+    ).catch(async (axiosError: AxiosError) => {
+      if (requestHttp.retry > 0) {
+        await delay(axiosConfig.retryDelay);
+        return this.excecuteOperation(
+          operation,
+          axiosConfig,
+          { ...requestHttp, retry: requestHttp.retry - 1 },
+          customAxiosApi,
+        );
+      }
+      throw new ErrorResponseHttp(
+        { message: axiosError.message, code: axiosError.code },
+        axiosError.status ?? 500,
+      );
     });
 
     return new ResponseHttp(axiosResponse.data, axiosResponse.status);
@@ -93,7 +96,7 @@ export class AxiosService implements MoradoHttpService {
       params: requestHttp.queryParams,
       timeout: this.configService.get('timeout'),
       retry: requestHttp?.retry ?? 1,
-      retryDelay: 3000,
+      retryDelay: 1000,
     };
   }
 
@@ -110,11 +113,6 @@ export class AxiosService implements MoradoHttpService {
         (res) => this.responseInterceptorError(res),
       );
     }
-
-    customAxiosApi.interceptors.response.use(
-      (response) => response,
-      (error) => this.responseInterceptorErrorRetry(error, customAxiosApi),
-    );
 
     return customAxiosApi;
   }
@@ -141,25 +139,5 @@ export class AxiosService implements MoradoHttpService {
       } ms`,
     );
     throw res;
-  }
-
-  private async responseInterceptorErrorRetry(
-    error: any,
-    customAxiosApi: AxiosInstance,
-  ): Promise<AxiosInstance> {
-    const { config } = error;
-
-    if (!config || !config.retry) {
-      throw error;
-    }
-
-    config.retry -= 1;
-    const delayRetryRequest = new Promise<void>((resolve) => {
-      setTimeout(() => {
-        console.log('retry the request', config.url);
-        resolve();
-      }, config.retryDelay || 1000);
-    });
-    return delayRetryRequest.then(() => customAxiosApi(config));
   }
 }
