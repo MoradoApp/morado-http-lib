@@ -3,8 +3,6 @@ import { ConfigService } from '@nestjs/config';
 import axios, { AxiosError, AxiosInstance } from 'axios';
 
 import { delay } from '../utils';
-import { ResponseHttp } from '../model/response-http';
-import { ErrorResponseHttp } from '../model/error-response.http';
 import { AxiosRequestType } from '../model/types/request-axios.type';
 import { RequestHttp } from '../model/interface/request-http.interface';
 import { MoradoHttpService } from '../model/interface/morado-http.interface';
@@ -13,7 +11,7 @@ import { MoradoHttpService } from '../model/interface/morado-http.interface';
 export class AxiosService implements MoradoHttpService {
   constructor(private readonly configService: ConfigService) {}
 
-  async get<T>(requestHttp: RequestHttp): Promise<ResponseHttp<T>> {
+  async get<T>(requestHttp: RequestHttp): Promise<T> {
     return this.excecuteOperation(
       'get',
       this.getOptions(requestHttp),
@@ -22,7 +20,7 @@ export class AxiosService implements MoradoHttpService {
     );
   }
 
-  async post<T>(requestHttp: RequestHttp): Promise<ResponseHttp<T>> {
+  async post<T>(requestHttp: RequestHttp): Promise<T> {
     return this.excecuteOperation(
       'post',
       this.getOptions(requestHttp),
@@ -31,7 +29,7 @@ export class AxiosService implements MoradoHttpService {
     );
   }
 
-  async put<T>(requestHttp: RequestHttp): Promise<ResponseHttp<T>> {
+  async put<T>(requestHttp: RequestHttp): Promise<T> {
     return this.excecuteOperation(
       'put',
       this.getOptions(requestHttp),
@@ -40,7 +38,7 @@ export class AxiosService implements MoradoHttpService {
     );
   }
 
-  async patch<T>(requestHttp: RequestHttp): Promise<ResponseHttp<T>> {
+  async patch<T>(requestHttp: RequestHttp): Promise<T> {
     return this.excecuteOperation(
       'patch',
       this.getOptions(requestHttp),
@@ -49,7 +47,7 @@ export class AxiosService implements MoradoHttpService {
     );
   }
 
-  async delete<T>(requestHttp: RequestHttp): Promise<ResponseHttp<T>> {
+  async delete<T>(requestHttp: RequestHttp): Promise<T> {
     return this.excecuteOperation(
       'delete',
       this.getOptions(requestHttp),
@@ -63,28 +61,25 @@ export class AxiosService implements MoradoHttpService {
     axiosConfig: AxiosRequestType,
     requestHttp: RequestHttp,
     customAxiosApi: AxiosInstance,
-  ): Promise<ResponseHttp<T>> {
-    const axiosResponse = await customAxiosApi[operation](
+  ): Promise<T> {
+    return customAxiosApi[operation](
       requestHttp.url,
       requestHttp.body ? requestHttp.body : axiosConfig,
       axiosConfig,
-    ).catch(async (axiosError: AxiosError) => {
-      if (requestHttp.retry > 0) {
-        await delay(axiosConfig.retryDelay);
-        return this.excecuteOperation(
-          operation,
-          axiosConfig,
-          { ...requestHttp, retry: requestHttp.retry - 1 },
-          customAxiosApi,
-        );
-      }
-      throw new ErrorResponseHttp(
-        { message: axiosError.message, code: axiosError.code },
-        axiosError.status ?? 500,
-      );
-    });
-
-    return new ResponseHttp(axiosResponse.data, axiosResponse.status);
+    )
+      .then((response) => response.data)
+      .catch(async (axiosError: AxiosError) => {
+        if (requestHttp.retry > 0) {
+          await delay(axiosConfig.retryDelay);
+          return this.excecuteOperation(
+            operation,
+            axiosConfig,
+            { ...requestHttp, retry: requestHttp.retry - 1 },
+            customAxiosApi,
+          );
+        }
+        throw Object.assign(new Error(), axiosError);
+      });
   }
 
   private getOptions(requestHttp: RequestHttp): AxiosRequestType {
