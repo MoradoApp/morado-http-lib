@@ -17,8 +17,6 @@ jobs:
         fetch-depth: 0
     - name: create .npmrc file
       run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_TOKEN }}" >> .npmrc
-    - name: Install nestjs cli
-      run: npm i -g @nestjs/cli
     - name: Install dependencies
       run: npm install
     - name: Run lint
