@@ -23,6 +23,8 @@ jobs:
       run: npm run lint
     - name: Run tests
       run: npm run test:cov
+    - name: Run build
+      run: npm run build
     - name: copy package.json
       run: cp package.json dist/package.json
     - name: copy .npmrc
